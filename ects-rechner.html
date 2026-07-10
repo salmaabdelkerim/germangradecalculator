@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECTS-Notenschnitt & Zielnote berechnen — German Grade Calculator</title>
+<meta name="description" content="Berechne deinen ECTS-gewichteten Gesamtnotenschnitt und finde heraus, welche Note du in deinen verbleibenden ECTS-Punkten brauchst, um deine Zielnote zu erreichen.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #1C2B3A;
+    --ink-soft: #3C4D5E;
+    --paper: #F5F1E8;
+    --paper-raised: #FFFDF8;
+    --line: #D8D0BE;
+    --brass: #8B5E34;
+    --brass-dark: #5E3E20;
+    --pass: #3C6E4A;
+    --fail: #A23B3B;
+    --fail-bg: #F6E9E7;
+    --pass-bg: #E9F0EA;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans', sans-serif; line-height:1.6; }
+  h1,h2,h3{ font-family:'Source Serif 4', serif; font-weight:600; margin:0 0 .4em; color:var(--ink); }
+  .wrap{max-width:760px; margin:0 auto; padding:0 24px;}
+  header.top{ border-bottom:1px solid var(--line); padding:18px 0; }
+  header.top .wrap{display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  .brand{ font-family:'Source Serif 4', serif; font-weight:600; font-size:19px; letter-spacing:.2px; }
+  .brand span{color:var(--brass-dark);}
+  nav a{color:var(--ink-soft); text-decoration:none; font-size:14px; margin-left:20px;}
+  nav a:hover{color:var(--brass-dark);}
+
+  .hero{padding:48px 0 12px;}
+  .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass-dark); margin-bottom:10px; }
+  .hero h1{font-size:30px; line-height:1.15; max-width:620px;}
+  .hero p.lead{font-size:16px; color:var(--ink-soft); max-width:560px; margin-top:12px;}
+
+  section.tool{ margin:44px 0; }
+  section.tool h2{font-size:21px;}
+  section.tool p.sub{color:var(--ink-soft); font-size:14px; margin-top:2px; max-width:560px;}
+
+  .calc{ background:var(--paper-raised); border:1px solid var(--line); border-radius:6px; padding:24px; margin-top:18px; }
+
+  /* GPA rows */
+  .row{ display:grid; grid-template-columns: 1fr 90px 100px 34px; gap:8px; align-items:center; margin-bottom:10px; }
+  .row input, .row select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:14px; padding:9px 10px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--ink); }
+  .row input:focus, .row select:focus{outline:2px solid var(--brass); outline-offset:1px;}
+  .row .ects{position:relative;}
+  .row .ects span{position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--ink-soft); pointer-events:none;}
+  .row .ects input{padding-right:36px;}
+  .row button.del{ background:none; border:1px solid var(--line); border-radius:4px; height:36px; color:var(--ink-soft); cursor:pointer; font-size:16px; line-height:1; }
+  .row button.del:hover{border-color:var(--fail); color:var(--fail);}
+
+  .add-btn{ background:none; border:1px dashed var(--line); border-radius:4px; padding:9px 14px; font-size:14px; color:var(--ink-soft); cursor:pointer; margin-top:6px; font-family:'IBM Plex Sans', sans-serif; }
+  .add-btn:hover{border-color:var(--brass); color:var(--brass-dark);}
+
+  .results{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid var(--line); }
+  .stat{background:var(--paper); border-radius:4px; padding:14px 16px;}
+  .stat .label{font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; font-family:'IBM Plex Mono', monospace;}
+  .stat .value{font-family:'Source Serif 4', serif; font-size:26px; font-weight:600; margin-top:2px;}
+  .stat.pass{background:var(--pass-bg);} .stat.pass .value{color:var(--pass);}
+  .stat.fail{background:var(--fail-bg);} .stat.fail .value{color:var(--fail);}
+  .descriptor{font-size:13px; color:var(--ink-soft); margin-top:4px;}
+
+  /* Target grade form */
+  .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-size:13px; color:var(--ink-soft); }
+  .field .unit-input{position:relative;}
+  .field .unit-input span{position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--ink-soft); pointer-events:none;}
+  .field input, .field select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:14px; padding:9px 10px; border:1px solid var(--line); border-radius:4px; background:var(--paper); color:var(--ink); }
+  .field input:focus{outline:2px solid var(--brass); outline-offset:1px;}
+  .field .unit-input input{padding-right:38px;}
+
+  .target-result{ margin-top:22px; padding-top:20px; border-top:1px solid var(--line); }
+  .target-result .big{ font-family:'Source Serif 4', serif; font-size:32px; font-weight:600; }
+  .target-result .msg{ font-size:14px; color:var(--ink-soft); margin-top:6px; max-width:520px; }
+  .target-result.ok .big{color:var(--pass);}
+  .target-result.warn .big{color:var(--fail);}
+  .steps-note{ font-size:12px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace; margin-top:14px; background:var(--paper); border-radius:4px; padding:10px 12px; }
+
+  footer{border-top:1px solid var(--line); margin-top:60px; padding:28px 0 60px;}
+  footer .wrap{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;}
+  footer p{font-size:13px; color:var(--ink-soft); margin:0;}
+  footer a{color:var(--ink-soft);}
+
+  @media (max-width:520px){
+    .row{grid-template-columns: 1fr 66px 84px 30px;}
+    .hero h1{font-size:24px;}
+    .results{grid-template-columns:1fr;}
+    .field-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a href="index.html" class="brand">German <span>Grade</span> Calculator</a>
+    <nav>
+      <a href="index.html">Notenrechner</a>
+      <a href="#gpa">ECTS-Schnitt</a>
+      <a href="#ziel">Zielnote</a>
+      <a href="impressum.html">Impressum</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">ECTS-gewichtet · Bachelor & Master</div>
+    <h1>Dein Gesamtschnitt — und was du noch dafür brauchst.</h1>
+    <p class="lead">Trage deine bisherigen Module mit ECTS-Punkten und Note ein, um deinen aktuellen Schnitt zu sehen. Dann setze dir eine Zielnote und finde heraus, welche Note dir in den verbleibenden ECTS noch fehlt.</p>
+  </div>
+
+  <section class="tool" id="gpa">
+    <h2>ECTS-gewichteter Notenschnitt</h2>
+    <p class="sub">Jedes Modul zählt im Verhältnis zu seinen ECTS-Punkten — ein 10-ECTS-Modul beeinflusst den Schnitt fünfmal so stark wie ein 2-ECTS-Modul.</p>
+
+    <div class="calc">
+      <div id="gpa-rows"></div>
+      <button class="add-btn" id="gpa-add">+ Modul hinzufügen</button>
+
+      <div class="results">
+        <div class="stat">
+          <div class="label">Gesamte ECTS</div>
+          <div class="value" id="gpa-total-ects">0</div>
+        </div>
+        <div class="stat" id="gpa-stat-grade">
+          <div class="label">Aktueller Schnitt</div>
+          <div class="value" id="gpa-result">–</div>
+          <div class="descriptor" id="gpa-descriptor"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tool" id="ziel">
+    <h2>Zielnote: was brauche ich noch?</h2>
+    <p class="sub">Gib deinen aktuellen Stand, deine verbleibenden ECTS und deine Wunschnote ein — der Rechner sagt dir, welchen Durchschnitt du in den restlichen Punkten erreichen musst.</p>
+
+    <div class="calc">
+      <div class="field-grid">
+        <div class="field">
+          <label for="t-ects">Bereits erreichte ECTS</label>
+          <div class="unit-input">
+            <input type="number" id="t-ects" value="60" min="0" step="1">
+            <span>ECTS</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="t-grade">Aktueller Notenschnitt</label>
+          <div class="unit-input">
+            <input type="number" id="t-grade" value="2.7" min="1" max="5" step="0.1">
+            <span>Note</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="t-remaining">Verbleibende ECTS</label>
+          <div class="unit-input">
+            <input type="number" id="t-remaining" value="12" min="0.1" step="1">
+            <span>ECTS</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="t-target">Zielnote (Gesamtabschluss)</label>
+          <div class="unit-input">
+            <input type="number" id="t-target" value="2.3" min="1" max="5" step="0.1">
+            <span>Note</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="target-result" id="target-box">
+        <div class="label" style="font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; font-family:'IBM Plex Mono', monospace;">Benötigte Note in den restlichen ECTS</div>
+        <div class="big" id="target-value">–</div>
+        <p class="msg" id="target-msg"></p>
+        <p class="steps-note" id="target-steps"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tool" style="margin-top:56px;">
+    <h2>Wie das gerechnet wird</h2>
+    <p class="sub" style="max-width:640px;">Gesamtschnitt = Σ (Note × ECTS) / Σ ECTS. Für die Zielnote wird die Formel nach der fehlenden Note umgestellt: gesucht ist die Note x in den verbleibenden ECTS, für die gilt: (bisherige ECTS × bisheriger Schnitt + restliche ECTS × x) / (gesamte ECTS) = Zielnote. Da in Deutschland eine niedrigere Zahl eine bessere Note bedeutet, kann eine geforderte Note unter 1,0 (nicht erreichbar, du bist bereits besser als nötig) oder über 5,0 (rechnerisch nicht mehr erreichbar) herauskommen — der Rechner weist in beiden Fällen darauf hin.</p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>German Grade Calculator — kostenlos, ohne Anmeldung, läuft komplett im Browser.</p>
+    <p><a href="impressum.html">Impressum</a></p>
+  </div>
+</footer>
+
+<script>
+/* ---------- ECTS GPA calculator ---------- */
+const grades = [1.0,1.3,1.7,2.0,2.3,2.7,3.0,3.3,3.7,4.0,5.0];
+let gpaRows = [
+  {id:1, name:'Modul 1', ects:6, grade:1.7},
+  {id:2, name:'Modul 2', ects:9, grade:2.3},
+  {id:3, name:'Modul 3', ects:5, grade:2.0}
+];
+let gpaNextId = 4;
+
+function descriptorFor(g){
+  if(g <= 1.5) return 'Sehr gut';
+  if(g <= 2.5) return 'Gut';
+  if(g <= 3.5) return 'Befriedigend';
+  if(g <= 4.0) return 'Ausreichend';
+  return 'Nicht ausreichend';
+}
+
+function renderGpa(){
+  const el = document.getElementById('gpa-rows');
+  el.innerHTML = '';
+  gpaRows.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.innerHTML = `
+      <input type="text" value="${r.name}" data-id="${r.id}" data-field="name" aria-label="Modulname" />
+      <div class="ects">
+        <input type="number" min="0" step="1" value="${r.ects}" data-id="${r.id}" data-field="ects" aria-label="ECTS-Punkte" />
+        <span>ECTS</span>
+      </div>
+      <select data-id="${r.id}" data-field="grade" aria-label="Note">
+        ${grades.map(g => `<option value="${g}" ${g===r.grade?'selected':''}>${g.toFixed(1)}</option>`).join('')}
+      </select>
+      <button class="del" data-id="${r.id}" aria-label="Modul entfernen">×</button>
+    `;
+    el.appendChild(div);
+  });
+
+  el.querySelectorAll('input,select').forEach(input => {
+    input.addEventListener('input', e => {
+      const id = Number(e.target.dataset.id);
+      const field = e.target.dataset.field;
+      const row = gpaRows.find(r => r.id === id);
+      if(field === 'ects') row.ects = Number(e.target.value) || 0;
+      else if(field === 'grade') row.grade = Number(e.target.value);
+      else row.name = e.target.value;
+      computeGpa();
+    });
+  });
+
+  el.querySelectorAll('.del').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = Number(e.currentTarget.dataset.id);
+      gpaRows = gpaRows.filter(r => r.id !== id);
+      renderGpa();
+      computeGpa();
+    });
+  });
+}
+
+function computeGpa(){
+  const totalEcts = gpaRows.reduce((s,r) => s + r.ects, 0);
+  document.getElementById('gpa-total-ects').textContent = totalEcts.toFixed(0);
+
+  const statEl = document.getElementById('gpa-stat-grade');
+  const resultEl = document.getElementById('gpa-result');
+  const descEl = document.getElementById('gpa-descriptor');
+  statEl.classList.remove('pass','fail');
+
+  if(totalEcts === 0){
+    resultEl.textContent = '–';
+    descEl.textContent = '';
+    return;
+  }
+  const weighted = gpaRows.reduce((s,r) => s + r.ects * r.grade, 0) / totalEcts;
+  resultEl.textContent = weighted.toFixed(2).replace('.', ',');
+  descEl.textContent = descriptorFor(weighted);
+  statEl.classList.add(weighted <= 4.0 ? 'pass' : 'fail');
+}
+
+document.getElementById('gpa-add').addEventListener('click', () => {
+  gpaRows.push({id: gpaNextId++, name: 'Modul ' + gpaRows.length, ects: 5, grade: 1.0});
+  renderGpa();
+  computeGpa();
+});
+
+renderGpa();
+computeGpa();
+
+/* ---------- Target grade calculator ---------- */
+const tEcts = document.getElementById('t-ects');
+const tGrade = document.getElementById('t-grade');
+const tRemaining = document.getElementById('t-remaining');
+const tTarget = document.getElementById('t-target');
+const targetBox = document.getElementById('target-box');
+const targetValue = document.getElementById('target-value');
+const targetMsg = document.getElementById('target-msg');
+const targetSteps = document.getElementById('target-steps');
+
+function fmt(n){ return n.toFixed(2).replace('.', ','); }
+
+function computeTarget(){
+  const ects = Number(tEcts.value) || 0;
+  const grade = Number(tGrade.value) || 0;
+  const remaining = Number(tRemaining.value) || 0;
+  const target = Number(tTarget.value) || 0;
+
+  targetBox.classList.remove('ok','warn');
+
+  if(remaining <= 0){
+    targetValue.textContent = '–';
+    targetMsg.textContent = 'Trage verbleibende ECTS größer als 0 ein.';
+    targetSteps.textContent = '';
+    return;
+  }
+
+  const totalEcts = ects + remaining;
+  const needed = (target * totalEcts - ects * grade) / remaining;
+
+  targetSteps.textContent = `(${fmt(target)} × ${totalEcts} − ${ects} × ${fmt(grade)}) / ${remaining} = ${fmt(needed)}`;
+
+  if(needed < 1.0){
+    targetValue.textContent = '≤ 1,0';
+    targetMsg.textContent = `Du bist bereits auf Kurs für eine bessere Note als ${fmt(target)} — selbst mit der Bestnote 1,0 in den restlichen ${remaining} ECTS würdest du deine Zielnote übertreffen.`;
+    targetBox.classList.add('ok');
+  } else if(needed > 5.0){
+    targetValue.textContent = 'nicht erreichbar';
+    targetMsg.textContent = `Selbst mit der Note 5,0 in den restlichen ${remaining} ECTS ist eine Zielnote von ${fmt(target)} rechnerisch nicht mehr möglich. Passe die Zielnote an, um zu sehen, was realistisch ist.`;
+    targetBox.classList.add('warn');
+  } else {
+    targetValue.textContent = fmt(needed);
+    const nearest = grades.reduce((a,b) => Math.abs(b-needed) < Math.abs(a-needed) ? b : a);
+    targetMsg.textContent = `Du brauchst im Schnitt mindestens ${fmt(needed)} in deinen restlichen ${remaining} ECTS, um auf ${fmt(target)} zu kommen. Die nächstliegende reguläre Notenstufe ist ${nearest.toFixed(1).replace('.',',')}.`;
+    targetBox.classList.add(needed <= 4.0 ? 'ok' : 'warn');
+  }
+}
+
+[tEcts, tGrade, tRemaining, tTarget].forEach(el => el.addEventListener('input', computeTarget));
+computeTarget();
+</script>
+
+</body>
+</html>
